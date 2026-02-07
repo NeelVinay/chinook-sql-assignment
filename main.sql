@@ -1,4 +1,13 @@
 
+
+
+/*
+   Query 1: Create MusicVideo table
+   - A MusicVideo "is a" Track (generalization)
+   - Cannot exist without a Track (FK)
+   - Each Track has 0 or 1 MusicVideo (PK on track_id enforces max 1)
+   */
+
 DROP TABLE IF EXISTS MusicVideo;
 
 CREATE TABLE MusicVideo (
@@ -9,6 +18,11 @@ CREATE TABLE MusicVideo (
         ON UPDATE CASCADE
 );
 
+
+/*
+   Query 2: Insert at least 10 videos (must reference existing tracks)
+   - Insert using SELECT so we don’t have to hardcode TrackId
+    */
 
 INSERT INTO MusicVideo (track_id, video_director)
 SELECT TrackId, 'Hannah Park' FROM tracks
@@ -51,6 +65,11 @@ SELECT TrackId, 'Ethan Walsh' FROM tracks
 WHERE Name = 'Evil Walks';
 
 
+/*
+   Query 3: Insert a video for track "Voodoo" without knowing TrackId
+   - Uses SELECT to find TrackId from track name
+   - This will work as long as "Voodoo" doesn’t already have a video
+    */
 
 INSERT INTO MusicVideo (track_id, video_director)
 SELECT TrackId, 'Jordan Rivers'
@@ -58,6 +77,10 @@ FROM tracks
 WHERE Name = 'Voodoo';
 
 
+/*
+   Query 4: Tracks that have an acute-accent vowel in the name
+   (á, é, í, ó, ú and uppercase versions)
+   */
 
 SELECT TrackId, Name
 FROM tracks
@@ -66,6 +89,11 @@ WHERE Name LIKE '%á%' OR Name LIKE '%é%' OR Name LIKE '%í%' OR Name LIKE '%ó
 ORDER BY Name;
 
 
+/*
+   Query 5 (Creative JOIN): Show purchased tracks with artist + album + customer
+   - JOINs: customers -> invoices -> invoice_items -> tracks -> albums -> artists
+   - Interesting because it shows who bought what, and from which artist/album
+  */
 
 SELECT
     c.FirstName || ' ' || c.LastName AS Customer,
@@ -85,6 +113,11 @@ ORDER BY inv.InvoiceDate DESC, Customer, Artist, Album, Track
 LIMIT 50;
 
 
+/* 
+   Query 6 (Creative GROUP + 2+ tables): Revenue by Genre
+   - JOINs invoice_items + tracks + genres
+   - GROUP BY genre to show which genres make the most money
+   */
 
 SELECT
     g.Name AS Genre,
@@ -98,6 +131,14 @@ GROUP BY g.GenreId, g.Name
 ORDER BY Revenue DESC;
 
 
+/* 
+   Query 7 (Bonus): Customers who listen to longer-than-average tracks,
+   excluding tracks longer than 15 minutes.
+   Interpretation for Chinook:
+   - "listen" = purchased (via invoices/invoice_items)
+   - Compute average track length using only tracks <= 15 minutes
+   - Find customers who purchased tracks > that average AND <= 15 minutes
+   */
 
 WITH eligible_tracks AS (
     SELECT TrackId, Milliseconds
@@ -125,6 +166,12 @@ JOIN longer_than_avg l ON l.TrackId = ii.TrackId
 ORDER BY Customer;
 
 
+/*
+   Query 8 (Bonus): Tracks NOT in one of the top 5 genres by total duration
+   - Compute total duration per genre (SUM milliseconds)
+   - Take top 5
+   - Return tracks whose GenreId is NOT in those top 5 genres
+    */
 
 WITH genre_totals AS (
     SELECT
@@ -151,3 +198,4 @@ LEFT JOIN genres g ON g.GenreId = t.GenreId
 WHERE t.GenreId IS NULL
    OR t.GenreId NOT IN (SELECT GenreId FROM top5)
 ORDER BY Genre, t.Name;
+
