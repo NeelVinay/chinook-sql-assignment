@@ -1,6 +1,4 @@
 
-
-
 /*
    Query 1: Create MusicVideo table
    - A MusicVideo "is a" Track (generalization)
@@ -131,71 +129,4 @@ GROUP BY g.GenreId, g.Name
 ORDER BY Revenue DESC;
 
 
-/* 
-   Query 7 (Bonus): Customers who listen to longer-than-average tracks,
-   excluding tracks longer than 15 minutes.
-   Interpretation for Chinook:
-   - "listen" = purchased (via invoices/invoice_items)
-   - Compute average track length using only tracks <= 15 minutes
-   - Find customers who purchased tracks > that average AND <= 15 minutes
-   */
-
-WITH eligible_tracks AS (
-    SELECT TrackId, Milliseconds
-    FROM tracks
-    WHERE Milliseconds <= 15 * 60 * 1000
-),
-avg_len AS (
-    SELECT AVG(Milliseconds) AS avg_ms
-    FROM eligible_tracks
-),
-longer_than_avg AS (
-    SELECT et.TrackId
-    FROM eligible_tracks et
-    CROSS JOIN avg_len a
-    WHERE et.Milliseconds > a.avg_ms
-)
-SELECT DISTINCT
-    c.CustomerId,
-    c.FirstName || ' ' || c.LastName AS Customer,
-    c.Email
-FROM customers c
-JOIN invoices inv      ON inv.CustomerId = c.CustomerId
-JOIN invoice_items ii  ON ii.InvoiceId = inv.InvoiceId
-JOIN longer_than_avg l ON l.TrackId = ii.TrackId
-ORDER BY Customer;
-
-
-/*
-   Query 8 (Bonus): Tracks NOT in one of the top 5 genres by total duration
-   - Compute total duration per genre (SUM milliseconds)
-   - Take top 5
-   - Return tracks whose GenreId is NOT in those top 5 genres
-    */
-
-WITH genre_totals AS (
-    SELECT
-        g.GenreId,
-        g.Name AS Genre,
-        SUM(t.Milliseconds) AS total_ms
-    FROM genres g
-    JOIN tracks t ON t.GenreId = g.GenreId
-    GROUP BY g.GenreId, g.Name
-),
-top5 AS (
-    SELECT GenreId
-    FROM genre_totals
-    ORDER BY total_ms DESC
-    LIMIT 5
-)
-SELECT
-    t.TrackId,
-    t.Name,
-    g.Name AS Genre,
-    t.Milliseconds
-FROM tracks t
-LEFT JOIN genres g ON g.GenreId = t.GenreId
-WHERE t.GenreId IS NULL
-   OR t.GenreId NOT IN (SELECT GenreId FROM top5)
-ORDER BY Genre, t.Name;
 
